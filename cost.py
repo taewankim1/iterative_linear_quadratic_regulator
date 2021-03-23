@@ -118,11 +118,11 @@ class unicycle(OptimalcontrolCost):
     def __init__(self,name,x_t,N):
         super().__init__(name)
        
-        self.Q = np.identity(2)
-        self.Q = 1e-1 * self.Q
-        self.Q[1,1] = 1e-6 * self.Q[1,1]
+        self.Q = 1e-1*np.identity(3)
+        # self.Q = 1e-1 * self.Q
+        self.Q[2,2] = 1e-2 * self.Q[1,1]
 
-        self.R = 0.5 * np.identity(2)
+        self.R = 1 * np.identity(2)
         
         self.ix = 3
         self.iu = 2
@@ -139,21 +139,27 @@ class unicycle(OptimalcontrolCost):
         else :
             N = np.size(x,axis = 0)
             
-        # # distance to target      
-        d = np.sqrt( np.sum(np.square(x[:,0:2] - self.x_t),1) )
-        d = np.expand_dims(d,1)
-        d_1 = d - 0.5
+        # # # distance to target      
+        # d = np.sqrt( np.sum(np.square(x[:,0:2] - self.x_t),1) )
+        # d = np.expand_dims(d,1)
+        # d_1 = d - 0.5
         
-        # theta diff
-        y_diff = np.zeros((N,1))
-        x_diff = np.zeros((N,1))
-        y_diff[:,0] = self.x_t[1] - x[:,1]
-        x_diff[:,0] = self.x_t[0] - x[:,0]
+        # # theta diff
+        # y_diff = np.zeros((N,1))
+        # x_diff = np.zeros((N,1))
+        # y_diff[:,0] = self.x_t[1] - x[:,1]
+        # x_diff[:,0] = self.x_t[0] - x[:,0]
         
-        theta_target = np.arctan2(y_diff,x_diff)
-        theta_diff = np.expand_dims(x[:,2],1) - theta_target
+        # theta_target = np.arctan2(y_diff,x_diff)
+        # theta_diff = np.expand_dims(x[:,2],1) - theta_target
       
-        x_mat = np.expand_dims(np.hstack((d_1,theta_diff)),2)
+        # x_mat = np.expand_dims(np.hstack((d_1,theta_diff)),2)
+        x_diff = np.copy(x)
+        x_diff[:,0] = x_diff[:,0] - self.x_t[0]
+        x_diff[:,1] = x_diff[:,1] - self.x_t[1]
+        x_diff[:,2] = x_diff[:,2] - self.x_t[2]
+
+        x_mat = np.expand_dims(x_diff,2)
         Q_mat = np.tile(self.Q,(N,1,1))
         lx = np.squeeze(np.matmul(np.matmul(np.transpose(x_mat,(0,2,1)),Q_mat),x_mat))
         
