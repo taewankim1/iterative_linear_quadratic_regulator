@@ -6,6 +6,6 @@ This reposit is the implementation of iterative lqr in Python. The codes are bas
 * Synthesis and stabilization of complex behaviors through online trajectory optimization: https://ieeexplore.ieee.org/document/6386025
 
 ## TODO
-* Integrate
+* Integrate with odeFun
 * Inpust constraints
 * State constraints (how?)
