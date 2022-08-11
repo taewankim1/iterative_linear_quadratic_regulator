@@ -6,8 +6,6 @@
 from __future__ import division
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy as sp
-import scipy.linalg
 import time
 import random
 def print_np(x):

@@ -23,11 +23,13 @@ import model
 # In[7]:
 
 class iLQR:
-    def __init__(self,name,horizon,maxIter,Model,Cost):
+    def __init__(self,name,delT,horizon,maxIter,Model,Cost,discretization="Euler"):
         self.name = name
         self.model = Model
         self.cost = Cost
+        self.delT = delT
         self.N = horizon
+        self.type_discretization = discretization
         
         # cost optimization
         self.verbosity = True
@@ -87,7 +89,12 @@ class iLQR:
         for i in range(N):
             dx = xnew[i,:] - x[i,:]
             unew[i,:] = u[i,:] + k[i,:] * alpha + np.dot(K[i,:,:],dx)
-            xnew[i+1,:] = self.model.forward(xnew[i,:],unew[i,:],i)
+            if self.type_discretization == "Euler" :
+                xnew[i+1,:] = self.model.forward_Euler(xnew[i,:],unew[i,:],self.delT)
+            elif self.type_discretization == "ACL" :
+                raise TypeError("Sorry, not implemented yet")
+            else :
+                raise TypeError("Euler and ACL only available")
             cnew[i] = self.cost.estimate_cost(xnew[i,:],unew[i,:])
             
         cnew[N] = self.cost.estimate_cost(xnew[N,:],np.zeros(self.model.iu))
@@ -194,7 +201,12 @@ class iLQR:
         self.x[0,:] = self.x0
         for j in range(np.size(self.Alpha,axis=0)):   
             for i in range(self.N):
-                self.x[i+1,:] = self.model.forward(self.x[i,:],self.Alpha[j]*self.u[i,:],i)       
+                if self.type_discretization == "Euler" :
+                    self.x[i+1,:] = self.model.forward_Euler(self.x[i,:],self.Alpha[j]*self.u[i,:],self.delT)       
+                elif self.type_discretization == "ACL" :
+                    raise TypeError("Sorry, not implemented yet")
+                else :
+                    raise TypeError("Euler and ACL are only available")
                 self.c[i] = self.cost.estimate_cost(self.x[i,:],self.Alpha[j]*self.u[i,:])
                 if  np.max( self.x[i+1,:] ) > 1e8 :                
                     diverge = True
@@ -211,7 +223,12 @@ class iLQR:
             # differentiate dynamics and cost
             if flgChange == True:
                 start = time.time()
-                self.fx, self.fu = self.model.diff(self.x[0:N,:],self.u)
+                if self.type_discretization == "Euler" :
+                    self.fx, self.fu = self.model.diff_discrete_Euler(self.x[0:N,:],self.u,self.delT)
+                elif self.type_discretization == "ACL" :
+                    self.fx, self.fu,_,_,_ = self.model.diff_discrete_zoh(self.x[0:N,:],self.u,self.delT)
+                else :
+                    raise TypeError("Euler and ACL only available")
                 c_x_u = self.cost.diff_cost(self.x[0:N,:],self.u)
                 c_xx_uu = self.cost.hess_cost(self.x[0:N,:],self.u)
                 c_xx_uu = 0.5 * ( np.transpose(c_xx_uu,(0,2,1)) + c_xx_uu )

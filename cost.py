@@ -6,8 +6,6 @@
 from __future__ import division
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy as sp
-import scipy.linalg
 import time
 import random
 def print_np(x):
@@ -120,7 +118,7 @@ class unicycle(OptimalcontrolCost):
        
         self.Q = 1e-1*np.identity(3)
         # self.Q = 1e-1 * self.Q
-        self.Q[2,2] = 1e-2 * self.Q[1,1]
+        self.Q[2,2] = 1e-2 * self.Q[2,2]
 
         self.R = 1 * np.identity(2)
         
