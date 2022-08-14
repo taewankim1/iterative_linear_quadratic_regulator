@@ -8,7 +8,7 @@ def print_np(x):
 
 import sys
 sys.path.append('../')
-import model
+import model_removed
 import cost
 from iLQR import iLQR
 
@@ -21,7 +21,7 @@ if __name__ == "__main__" :
     iu = 2
     N = 500
     delT = 0.1
-    myModel = model.unicycle('Hello',ix,iu,delT)
+    myModel = model_removed.unicycle('Hello',ix,iu,delT)
     myCost = cost.unicycle('Hello',x_t,N)
 
     maxIter= 100

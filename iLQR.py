@@ -9,26 +9,24 @@ import scipy as sp
 import scipy.linalg
 import time
 import random
+from scipy.integrate import solve_ivp
 def print_np(x):
     print ("Type is %s" % (type(x)))
     print ("Shape is %s" % (x.shape,))
     # print ("Values are: \n%s" % (x))
-
-
-# In[5]:
 import cost
 import model
 
 
-# In[7]:
-
 class iLQR:
-    def __init__(self,name,delT,horizon,maxIter,Model,Cost,discretization="Euler"):
+    def __init__(self,name,delT,horizon,tf,maxIter,Model,Cost,discretization="Euler"):
         self.name = name
         self.model = Model
         self.cost = Cost
         self.delT = delT
         self.N = horizon
+        assert delT*horizon == tf
+        self.tf = tf
         self.type_discretization = discretization
         
         # cost optimization
@@ -68,6 +66,14 @@ class iLQR:
         self.cuu = np.zeros((self.N,self.model.iu,self.model.iu))
         self.Vx = np.zeros((self.N+1,self.model.ix))
         self.Vxx = np.zeros((self.N+1,self.model.ix,self.model.ix))
+
+    def forward_single_step_ode(self,xc,uc) :
+        def dfdt(t,x,u) :
+            return np.squeeze(self.model.forward(x,u))
+
+        sol = solve_ivp(dfdt, (0,self.delT),xc,args=(uc,),method='RK45',rtol=1e-6,atol=1e-10)
+        return sol.y[:,-1]
+
     
     def forward(self,x0,u,K,x,k,alpha):
         # TODO - change integral method to odefun
@@ -92,13 +98,14 @@ class iLQR:
             if self.type_discretization == "Euler" :
                 xnew[i+1,:] = self.model.forward_Euler(xnew[i,:],unew[i,:],self.delT)
             elif self.type_discretization == "ACL" :
-                raise TypeError("Sorry, not implemented yet")
+                xnew[i+1,:] = self.forward_single_step_ode(xnew[i,:],unew[i,:])
             else :
                 raise TypeError("Euler and ACL only available")
             cnew[i] = self.cost.estimate_cost(xnew[i,:],unew[i,:])
             
         cnew[N] = self.cost.estimate_cost(xnew[N,:],np.zeros(self.model.iu))
         return xnew,unew,cnew
+
         
     def backward(self):
         diverge = False
@@ -204,7 +211,7 @@ class iLQR:
                 if self.type_discretization == "Euler" :
                     self.x[i+1,:] = self.model.forward_Euler(self.x[i,:],self.Alpha[j]*self.u[i,:],self.delT)       
                 elif self.type_discretization == "ACL" :
-                    raise TypeError("Sorry, not implemented yet")
+                    self.x[i+1,:] = self.forward_single_step_ode(self.x[i,:],self.Alpha[j]*self.u[i,:])
                 else :
                     raise TypeError("Euler and ACL are only available")
                 self.c[i] = self.cost.estimate_cost(self.x[i,:],self.Alpha[j]*self.u[i,:])
@@ -226,19 +233,19 @@ class iLQR:
                 if self.type_discretization == "Euler" :
                     self.fx, self.fu = self.model.diff_discrete_Euler(self.x[0:N,:],self.u,self.delT)
                 elif self.type_discretization == "ACL" :
-                    self.fx, self.fu,_,_,_ = self.model.diff_discrete_zoh(self.x[0:N,:],self.u,self.delT)
+                    self.fx, self.fu,_,_,_ = self.model.diff_discrete_zoh(self.x[0:N,:],self.u,self.delT,self.tf)
                 else :
                     raise TypeError("Euler and ACL only available")
-                c_x_u = self.cost.diff_cost(self.x[0:N,:],self.u)
-                c_xx_uu = self.cost.hess_cost(self.x[0:N,:],self.u)
+                c_x_u = self.cost.diff_cost_central(self.x[0:N,:],self.u)
+                c_xx_uu = self.cost.hess_cost_central(self.x[0:N,:],self.u)
                 c_xx_uu = 0.5 * ( np.transpose(c_xx_uu,(0,2,1)) + c_xx_uu )
                 self.cx[0:N,:] = c_x_u[:,0:self.model.ix]
                 self.cu[0:N,:] = c_x_u[:,self.model.ix:self.model.ix+self.model.iu]
                 self.cxx[0:N,:,:] = c_xx_uu[:,0:ix,0:ix]
                 self.cxu[0:N,:,:] = c_xx_uu[:,0:ix,ix:(ix+iu)]
                 self.cuu[0:N,:,:] = c_xx_uu[:,ix:(ix+iu),ix:(ix+iu)]
-                c_x_u = self.cost.diff_cost(self.x[N:,:],np.zeros((1,iu)))
-                c_xx_uu = self.cost.hess_cost(self.x[N:,:],np.zeros((1,iu)))
+                c_x_u = self.cost.diff_cost_central(self.x[N:,:],np.zeros((1,iu)))
+                c_xx_uu = self.cost.hess_cost_central(self.x[N:,:],np.zeros((1,iu)))
                 c_xx_uu = 0.5 * ( c_xx_uu + c_xx_uu.T)
                 self.cx[N,:] = c_x_u[0:self.model.ix]
                 self.cxx[N,:,:] = c_xx_uu[0:ix,0:ix]
