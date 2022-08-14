@@ -9,9 +9,9 @@ def print_np(x):
     # print ("Values are: \n%s" % (x))
 
 
-from cost import OptimalcontrolCost
+from cost.cost import OptimalcontrolCost
 
-class unicycle(OptimalcontrolCost):
+class UnicycleCost(OptimalcontrolCost):
     def __init__(self,name,xf,N):
         super().__init__(name)
        
