@@ -21,7 +21,7 @@ class unicycle(OptimalcontrolCost):
         self.N = N
 
         # weight for cost
-        self.R = 1 * np.identity(2)
+        self.R = 1 * np.identity(self.iu)
 
         # weight for constraint
         self.wf = 1e6
@@ -45,6 +45,18 @@ class unicycle(OptimalcontrolCost):
             lu = np.squeeze( np.matmul(np.matmul(np.transpose(u_mat,(0,2,1)),R_mat),u_mat) )
             
             cost += (lu)
+
+            # cost for input constaint
+            v = u[:,0]
+            flag_violation = (v - 2) > 0  
+            v_violation = (v - 2) * flag_violation
+            lv = self.w_input_constaint * (v_violation ** 2)
+            # lv = self.w_input_constaint * np.sum(v_violation)
+            cost += lv
+            #     print("v",v )
+                # print("v_vio",v_violation)
+            #     print("lv",lv)
+
         else :
             x_diff = np.copy(x)
             x_diff[:,0] = x_diff[:,0] - self.xf[0]

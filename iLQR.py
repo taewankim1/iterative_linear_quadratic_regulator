@@ -14,8 +14,6 @@ def print_np(x):
     print ("Type is %s" % (type(x)))
     print ("Shape is %s" % (x.shape,))
     # print ("Values are: \n%s" % (x))
-import cost.cost as cost
-import model
 
 
 class iLQR:
