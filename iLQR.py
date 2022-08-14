@@ -14,7 +14,7 @@ def print_np(x):
     print ("Type is %s" % (type(x)))
     print ("Shape is %s" % (x.shape,))
     # print ("Values are: \n%s" % (x))
-import cost
+import cost.cost as cost
 import model
 
 
@@ -101,9 +101,9 @@ class iLQR:
                 xnew[i+1,:] = self.forward_single_step_ode(xnew[i,:],unew[i,:])
             else :
                 raise TypeError("Euler and ACL only available")
-            cnew[i] = self.cost.estimate_cost(xnew[i,:],unew[i,:])
+            cnew[i] = self.cost.estimate_cost(xnew[i,:],unew[i,:],final=False)
             
-        cnew[N] = self.cost.estimate_cost(xnew[N,:],np.zeros(self.model.iu))
+        cnew[N] = self.cost.estimate_cost(xnew[N,:],np.zeros(self.model.iu),final=True)
         return xnew,unew,cnew
 
         
@@ -214,12 +214,12 @@ class iLQR:
                     self.x[i+1,:] = self.forward_single_step_ode(self.x[i,:],self.Alpha[j]*self.u[i,:])
                 else :
                     raise TypeError("Euler and ACL are only available")
-                self.c[i] = self.cost.estimate_cost(self.x[i,:],self.Alpha[j]*self.u[i,:])
+                self.c[i] = self.cost.estimate_cost(self.x[i,:],self.Alpha[j]*self.u[i,:],final=False)
                 if  np.max( self.x[i+1,:] ) > 1e8 :                
                     diverge = True
                     print("initial trajectory is already diverge")
                     pass
-            self.c[self.N] = self.cost.estimate_cost(self.x[self.N,:],np.zeros(self.model.iu))
+            self.c[self.N] = self.cost.estimate_cost(self.x[self.N,:],np.zeros(self.model.iu),final=True)
             if diverge == False:
                 break
                 pass
@@ -236,16 +236,16 @@ class iLQR:
                     self.fx, self.fu,_,_,_ = self.model.diff_discrete_zoh(self.x[0:N,:],self.u,self.delT,self.tf)
                 else :
                     raise TypeError("Euler and ACL only available")
-                c_x_u = self.cost.diff_cost_central(self.x[0:N,:],self.u)
-                c_xx_uu = self.cost.hess_cost_central(self.x[0:N,:],self.u)
+                c_x_u = self.cost.diff_cost_central(self.x[0:N,:],self.u,final=False)
+                c_xx_uu = self.cost.hess_cost_central(self.x[0:N,:],self.u,final=False)
                 c_xx_uu = 0.5 * ( np.transpose(c_xx_uu,(0,2,1)) + c_xx_uu )
                 self.cx[0:N,:] = c_x_u[:,0:self.model.ix]
                 self.cu[0:N,:] = c_x_u[:,self.model.ix:self.model.ix+self.model.iu]
                 self.cxx[0:N,:,:] = c_xx_uu[:,0:ix,0:ix]
                 self.cxu[0:N,:,:] = c_xx_uu[:,0:ix,ix:(ix+iu)]
                 self.cuu[0:N,:,:] = c_xx_uu[:,ix:(ix+iu),ix:(ix+iu)]
-                c_x_u = self.cost.diff_cost_central(self.x[N:,:],np.zeros((1,iu)))
-                c_xx_uu = self.cost.hess_cost_central(self.x[N:,:],np.zeros((1,iu)))
+                c_x_u = self.cost.diff_cost_central(self.x[N:,:],np.zeros((1,iu)),final=True)
+                c_xx_uu = self.cost.hess_cost_central(self.x[N:,:],np.zeros((1,iu)),final=True)
                 c_xx_uu = 0.5 * ( c_xx_uu + c_xx_uu.T)
                 self.cx[N,:] = c_x_u[0:self.model.ix]
                 self.cxx[N,:,:] = c_xx_uu[0:ix,0:ix]
