@@ -5,7 +5,3 @@ This reposit is the implementation of iterative lqr in Python. The codes are bas
 * Control-Limited Differential Dynamic Programming: https://homes.cs.washington.edu/~todorov/papers/TassaICRA14.pdf
 * Synthesis and stabilization of complex behaviors through online trajectory optimization: https://ieeexplore.ieee.org/document/6386025
 
-## TODO
-* Integrate with odeFun
-* Inpust constraints
-* State constraints (how?)
