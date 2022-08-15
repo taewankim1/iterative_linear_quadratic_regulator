@@ -28,6 +28,23 @@ class OptimalcontrolModel(object) :
         print("this is in parent class")
         pass
 
+    def forward_Euler(self,x,u,delT) :
+        f = self.forward(x,u)        
+        return np.squeeze(x+f*delT)
+    
+    def forward_RK3(self,x,u,delT):
+        k1 = delT * self.forward(x,u)        
+        k2 = delT * self.forward(x + 0.5*k1,u)        
+        k3 = delT * self.forward(x - k1 + 2*k2,u)        
+        return np.squeeze(x + 1/6*(k1+4*k2+k3))
+
+    def forward_RK4(self,x,u,delT):
+        k1 = delT * self.forward(x,u)        
+        k2 = delT * self.forward(x + 0.5*k1,u)        
+        k3 = delT * self.forward(x + 0.5*k2,u)        
+        k4 = delT * self.forward(x + k3,u)        
+        return np.squeeze(x + 1/6*(k1+2*k2+2*k3+k4))
+
     def diff(self) :
         print("this is in parent class")
         pass
@@ -169,6 +186,93 @@ class OptimalcontrolModel(object) :
         B = delT * fu
         return A,B
 
+    def diff_discrete_RK3(self,x,u,delT,tf=None) :
+        ix = self.ix
+        iu = self.iu
+
+        ndim = np.ndim(x)
+        if ndim == 1: # 1 step state & input
+            N = 1
+            x = np.expand_dims(x,axis=0)
+            u = np.expand_dims(u,axis=0)
+        else :
+            N = np.size(x,axis = 0)
+
+        eye = np.eye(ix)
+        eye_3d = np.tile(eye,(N,1,1))
+        k1 = delT * self.forward(x,u)        
+        k2 = delT * self.forward(x + 0.5*k1,u)        
+        k3 = delT * self.forward(x - k1 + 2*k2,u)        
+
+        def get_fxfu(x,u) :
+            if self.type_linearization == "numeric_central" :
+                fx,fu = self.diff_numeric_central(x,u)
+            elif self.type_linearization == "numeric_forward" :
+                fx,fu = self.diff_numeric(x,u)
+            elif self.type_linearization == "analytic" :
+                fx,fu = self.diff(x,u)
+            return fx,fu
+        
+        A1,B1 = get_fxfu(x,u)
+        A2,B2 = get_fxfu(x+0.5*k1,u)
+        A3,B3 = get_fxfu(x-k1+2*k2,u)
+
+        dA1 = delT*A1
+        dA2 = delT*A2@(eye_3d + 0.5*dA1)
+        dA3 = delT*A3@(eye_3d - dA1 + 2*dA2)
+        dB1 = delT*B1
+        dB2 = delT*B2 + 0.5*delT*A2@dB1
+        dB3 = delT*B3 + delT*A3@(2*dB2-dB1)
+
+        A = eye_3d + 1/6*(dA1+4*dA2+dA3)
+        B = 1/6 * (dB1+4*dB2+dB3)
+        return A,B
+
+    def diff_discrete_RK4(self,x,u,delT,tf=None) :
+        ix = self.ix
+        iu = self.iu
+
+        ndim = np.ndim(x)
+        if ndim == 1: # 1 step state & input
+            N = 1
+            x = np.expand_dims(x,axis=0)
+            u = np.expand_dims(u,axis=0)
+        else :
+            N = np.size(x,axis = 0)
+
+        eye = np.eye(ix)
+        eye_3d = np.tile(eye,(N,1,1))
+        k1 = delT * self.forward(x,u)        
+        k2 = delT * self.forward(x + 0.5*k1,u)        
+        k3 = delT * self.forward(x + 0.5*k2,u)        
+        k4 = delT * self.forward(x + k3,u)        
+
+        def get_fxfu(x,u) :
+            if self.type_linearization == "numeric_central" :
+                fx,fu = self.diff_numeric_central(x,u)
+            elif self.type_linearization == "numeric_forward" :
+                fx,fu = self.diff_numeric(x,u)
+            elif self.type_linearization == "analytic" :
+                fx,fu = self.diff(x,u)
+            return fx,fu
+        
+        A1,B1 = get_fxfu(x,u)
+        A2,B2 = get_fxfu(x+0.5*k1,u)
+        A3,B3 = get_fxfu(x+0.5*k2,u)
+        A4,B4 = get_fxfu(x+k3,u)
+
+        dA1 = delT*A1
+        dA2 = delT*A2@(eye_3d + 0.5*dA1)
+        dA3 = delT*A3@(eye_3d + 0.5*dA2)
+        dA4 = delT*A4@(eye_3d + dA3)
+        dB1 = delT*B1
+        dB2 = delT*B2 + 0.5*delT*A2@dB1
+        dB3 = delT*B3 + 0.5*delT*A3@dB2
+        dB4 = delT*B4 + delT*A4@dB3
+
+        A = eye_3d + 1/6*(dA1+2*dA2+2*dA3+dA4)
+        B = 1/6 * (dB1+2*dB2+2*dB3+dB4)
+        return A,B
 
     def diff_discrete_zoh(self,x,u,delT,tf=None) :
         # delT = self.delT

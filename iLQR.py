@@ -17,7 +17,7 @@ def print_np(x):
 
 
 class iLQR:
-    def __init__(self,name,delT,horizon,tf,maxIter,Model,Cost,discretization="Euler"):
+    def __init__(self,name,delT,horizon,tf,maxIter,Model,Cost,discretization="RK3"):
         self.name = name
         self.model = Model
         self.cost = Cost
@@ -95,10 +95,14 @@ class iLQR:
             unew[i,:] = u[i,:] + k[i,:] * alpha + np.dot(K[i,:,:],dx)
             if self.type_discretization == "Euler" :
                 xnew[i+1,:] = self.model.forward_Euler(xnew[i,:],unew[i,:],self.delT)
-            elif self.type_discretization == "ACL" :
+            elif self.type_discretization == "RK3" :
+                xnew[i+1,:] = self.model.forward_RK3(xnew[i,:],unew[i,:],self.delT)
+            elif self.type_discretization == "RK4" :
+                xnew[i+1,:] = self.model.forward_RK4(xnew[i,:],unew[i,:],self.delT)
+            elif self.type_discretization == "STM" :
                 xnew[i+1,:] = self.forward_single_step_ode(xnew[i,:],unew[i,:])
             else :
-                raise TypeError("Euler and ACL only available")
+                raise TypeError("Euler,RK3,STM only available")
             cnew[i] = self.cost.estimate_cost(xnew[i,:],unew[i,:],final=False)
             
         cnew[N] = self.cost.estimate_cost(xnew[N,:],np.zeros(self.model.iu),final=True)
@@ -208,10 +212,14 @@ class iLQR:
             for i in range(self.N):
                 if self.type_discretization == "Euler" :
                     self.x[i+1,:] = self.model.forward_Euler(self.x[i,:],self.Alpha[j]*self.u[i,:],self.delT)       
-                elif self.type_discretization == "ACL" :
+                elif self.type_discretization == "RK3" :
+                    self.x[i+1,:] = self.model.forward_RK3(self.x[i,:],self.Alpha[j]*self.u[i,:],self.delT)       
+                elif self.type_discretization == "RK4" :
+                    self.x[i+1,:] = self.model.forward_RK4(self.x[i,:],self.Alpha[j]*self.u[i,:],self.delT)       
+                elif self.type_discretization == "STM" :
                     self.x[i+1,:] = self.forward_single_step_ode(self.x[i,:],self.Alpha[j]*self.u[i,:])
                 else :
-                    raise TypeError("Euler and ACL are only available")
+                    raise TypeError("Euler,RK3,STM only available")
                 self.c[i] = self.cost.estimate_cost(self.x[i,:],self.Alpha[j]*self.u[i,:],final=False)
                 if  np.max( self.x[i+1,:] ) > 1e8 :                
                     diverge = True
@@ -230,10 +238,14 @@ class iLQR:
                 start = time.time()
                 if self.type_discretization == "Euler" :
                     self.fx, self.fu = self.model.diff_discrete_Euler(self.x[0:N,:],self.u,self.delT)
-                elif self.type_discretization == "ACL" :
+                elif self.type_discretization == "RK3" :
+                    self.fx, self.fu = self.model.diff_discrete_RK3(self.x[0:N,:],self.u,self.delT)
+                elif self.type_discretization == "RK4" :
+                    self.fx, self.fu = self.model.diff_discrete_RK4(self.x[0:N,:],self.u,self.delT)
+                elif self.type_discretization == "STM" :
                     self.fx, self.fu,_,_,_ = self.model.diff_discrete_zoh(self.x[0:N,:],self.u,self.delT,self.tf)
                 else :
-                    raise TypeError("Euler and ACL only available")
+                    raise TypeError("Euler,RK3,STM only available")
                 c_x_u = self.cost.diff_cost_central(self.x[0:N,:],self.u,final=False)
                 c_xx_uu = self.cost.hess_cost_central(self.x[0:N,:],self.u,final=False)
                 c_xx_uu = 0.5 * ( np.transpose(c_xx_uu,(0,2,1)) + c_xx_uu )

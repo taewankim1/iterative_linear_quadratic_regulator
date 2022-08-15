@@ -46,15 +46,17 @@ class UnicycleModel(OptimalcontrolModel):
 
         return f
 
-    def forward_Euler(self,x,u,delT,discrete=True):
+    def forward_Euler(self,x,u,delT) :
         
         f = self.forward(x,u)        
-
-        if discrete is True :
-            return np.squeeze(x + f * delT)
-        else :
-            return f
+        return np.squeeze(x+f*delT)
     
+    def forward_RK3(self,x,u,delT):
+        k1 = delT * self.forward(x,u)        
+        k2 = delT * self.forward(x + 0.5*k1,u)        
+        k3 = delT * self.forward(x - k1 + 2*k2,u)        
+        return np.squeeze(x + 1/6*(k1+4*k2+k3))
+
     # def diff_discrete_Euler_temp(self,x,u):
     #     self.delT = 0.1
     #     # dimension
